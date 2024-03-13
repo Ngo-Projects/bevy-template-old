@@ -10,14 +10,14 @@ readme = "ReadMe.md"
 rust-version = "1.76.0"
 
 [dependencies]
-bevy = { version = "^0", default-features = false, features = [
+bevy = { version = "*", default-features = false, features = [
   "animation",
   "asset_processor",
   "bevy_animation",
   "bevy_asset",
   "bevy_audio",
   "bevy_core_pipeline",
-  "bevy_dynamic_plugin",
+  # "bevy_dynamic_plugin",
   "bevy_gilrs",
   "bevy_render",
   "bevy_scene",
@@ -25,8 +25,6 @@ bevy = { version = "^0", default-features = false, features = [
   "bevy_text",
   "bevy_ui",
   "bevy_winit",
-  "embedded_watcher",
-  "file_watcher",
   "multi-threaded",
   "png",
   "serialize",
@@ -36,14 +34,20 @@ bevy = { version = "^0", default-features = false, features = [
   # "wayland",
   "x11",
 ] }
-bevy_rapier2d = { version = "^0", features = [
-  "debug-render-2d",
+bevy_rapier2d = { version = "*", features = [
   "enhanced-determinism",
-  "parallel",
+  # "parallel",
   "serde-serialize",
   "wasm-bindgen",
 ] }
-leafwing-input-manager = "^0"
+leafwing-input-manager = "*"
+
+[dev-dependencies]
+bevy = { version = "*", default-features = false, features = [
+  "embedded_watcher",
+  "file_watcher",
+] }
+bevy_rapier2d = { version = "*", features = ["debug-render-2d"] }
 
 [profile.release]
 codegen-units = 1

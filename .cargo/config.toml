@@ -2,8 +2,8 @@
 # linker = "clang"
 # rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
 
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld", "-Zshare-generics=y"]
+# [target.aarch64-apple-darwin]
+# rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld", "-Zshare-generics=y"]
 
 [target.wasm32-unknown-unknown]
 runner = "wasm-server-runner"

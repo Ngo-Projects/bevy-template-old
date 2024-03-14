@@ -83,27 +83,27 @@ jobs:
           command: build
           args: --release --target=${{ matrix.platform.target }}
       - name: Zip Linux/Windows builds
-        if: matrix.platform.name != 'macos' && matrix.platform.name != 'web'
+        if: matrix.platform.name == 'linux' || matrix.platform.name == 'windows'
         run: |
           echo List .
-          ls -la
+          ls
           echo List target
-          ls -la target
+          ls target
           echo List target/release
-          ls -la target/release
+          ls target/release
           cd target/release
           zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact non-macOS
-        if: matrix.platform.name != 'macos'
+        if: ${{ !contains(matrix.platform.name , 'macos') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
           path: target/release/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
       - name: Rename macOS build
-        if: matrix.platform.name == 'macos-arm' || matrix.platform.name == 'macos-intel'
+        if: contains(matrix.platform.name, 'macos')
         run: mv target/release/${{ env.ITCH_GAME }} ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact macOS
-        if: matrix.platform.name == 'macos'
+        if: contains(matrix.platform.name, 'macos')
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform.name }}

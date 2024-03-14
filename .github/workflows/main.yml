@@ -89,25 +89,28 @@ jobs:
           ls
           echo List target
           ls target
-          echo List target/release
-          ls target/release
-          cd target/release
+          echo List target/${{ matrix.platform.target }}/release
+          ls target/${{ matrix.platform.target }}/release
+          cd target/${{ matrix.platform.target }}/release
           zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact non-macOS
         if: ${{ !contains(matrix.platform.name , 'macos') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
-          path: target/release/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
+          path: target/${{ matrix.platform.target }}/release/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
       - name: Rename macOS build
         if: contains(matrix.platform.name, 'macos')
-        run: mv target/release/${{ env.ITCH_GAME }} ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          ls -la
+          mv ${{ env.ITCH_GAME }} ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact macOS
         if: contains(matrix.platform.name, 'macos')
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform.name }}
-          path: ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+          path: target/${{ matrix.platform.target }}/release/${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
   bundle-universal-app:
     name: Bundle universal macOS app
     needs: build-binaries

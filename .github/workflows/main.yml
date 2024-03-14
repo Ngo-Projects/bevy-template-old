@@ -85,16 +85,16 @@ jobs:
       - name: Zip Linux/Windows builds
         if: matrix.platform.name == 'linux' || matrix.platform.name == 'windows'
         run: |
-          echo List .
-          ls
-          echo List target
-          ls target
-          echo List target/${{ matrix.platform.target }}/release
-          ls target/${{ matrix.platform.target }}/release
           cd target/${{ matrix.platform.target }}/release
           tar -acf ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
-      - name: Upload artifact non-macOS
-        if: ${{ !contains(matrix.platform.name , 'macos') }}
+      - name: Upload Linux/Windows artifact
+        if: matrix.platform.name == 'web'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
+          path: target/web/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
+      - name: Upload web artifact
+        if: matrix.platform.name == 'linux' || matrix.platform.name == 'windows'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
@@ -121,7 +121,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: artifact-macos-*
+          pattern: artifact-macos-*
           path: artifacts
       - name: Bundle universal app
         run: |
@@ -178,11 +178,11 @@ jobs:
       - name: Download web artifact
         uses: actions/download-artifact@v4
         with:
-          name: artifact-web
+          name: ${{ env.ITCH_GAME }}_web
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: artifact-web
+          folder: ${{ env.ITCH_GAME }}_web
   deploy-itch:
     needs: bundle-universal-app
     runs-on: ubuntu-latest

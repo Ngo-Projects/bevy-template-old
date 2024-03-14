@@ -103,7 +103,6 @@ jobs:
         if: contains(matrix.platform.name, 'macos')
         run: |
           cd target/${{ matrix.platform.target }}/release
-          ls -la
           mv ${{ env.ITCH_GAME }} ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact macOS
         if: contains(matrix.platform.name, 'macos')
@@ -125,7 +124,6 @@ jobs:
           path: artifacts
       - name: Bundle universal app
         run: |
-          ls -la artifacts/artifact-macos-*
           cd artifacts
           mv artifact-macos-arm/${{ env.ITCH_GAME }}.arm64 .
           mv artifact-macos-intel/${{ env.ITCH_GAME }}.x86_64 .
@@ -154,7 +152,7 @@ jobs:
           merge-multiple: true
       - name: Get version
         id: get-version
-        run: echo "VERSION=$(grep -o -P '(?<=version = ").*(?=")' Cargo.toml)" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(grep '^version = .*"' Cargo.toml | sed -e 's/version = //' -e 's/"//g')" >> $GITHUB_OUTPUT
       - name: Get changelog
         id: get-changelog
         run: |
@@ -186,7 +184,7 @@ jobs:
       - name: Unzip web artifact
         run: |
           mkdir -p pages
-          tar -xzf artifact/${{ env.ITCH_GAME }}_web.zip -C pages
+          tar -xf artifact/${{ env.ITCH_GAME }}_web.zip -C pages
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
@@ -209,8 +207,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
+          path: artifact
       - name: Deploy Itch.io build
         uses: josephbmanley/butler-publish-itchio-action@master
         env:
           CHANNEL: ${{ matrix.platform.channel }}
-          PACKAGE: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
+          PACKAGE: artifact/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip

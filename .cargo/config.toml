@@ -1,11 +1,8 @@
-[target.aarch64-linux-android]
-linker = "aarch64-linux-android29-clang"
-
 # [target.x86_64-unknown-linux-gnu]
 # linker = "clang"
 # rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
 
-[target.x86_64-apple-darwin]
+[target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld", "-Zshare-generics=y"]
 
 [target.wasm32-unknown-unknown]

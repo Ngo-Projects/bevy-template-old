@@ -1,0 +1,13 @@
+[build]
+target = "platforms/web/index.html"
+release = true
+dist = "target/web"
+
+[watch]
+watch = ["."]
+
+[clean]
+cargo = true
+
+[serve]
+port = 30000

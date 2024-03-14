@@ -31,7 +31,8 @@ bevy = { version = "*", default-features = false, features = [
   "shader_format_glsl",
   "shader_format_spirv",
   "wav",
-  # "wayland",
+  "wayland",
+  "webgl2",
   "x11",
 ] }
 bevy_rapier2d = { version = "*", features = [
@@ -48,6 +49,7 @@ bevy = { version = "*", default-features = false, features = [
   "file_watcher",
 ] }
 bevy_rapier2d = { version = "*", features = ["debug-render-2d"] }
+trunk = "*"
 
 [profile.release]
 codegen-units = 1

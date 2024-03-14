@@ -9,43 +9,123 @@ on:
 permissions: write-all
 
 jobs:
-  build-game:
-    name: Build game for each platform
+  build-binaries:
+    name: Build game binaries for each platform
     strategy:
       fail-fast: false
       matrix:
         platform:
           [
-            { name: linux, target: x86_64-unknown-linux-gnu },
-            { name: macos, target: aarch64-apple-darwin },
-            { name: web, target: wasm32-unknown-unknown },
-            { name: windows, target: x86_64-pc-windows-gnu },
+            {
+              name: linux,
+              runner: ubuntu-latest,
+              target: x86_64-unknown-linux-gnu,
+              extension: "",
+            },
+            {
+              name: macos-arm,
+              runner: macos-14,
+              target: aarch64-apple-darwin,
+              extension: ".arm64",
+            },
+            {
+              name: macos-intel,
+              runner: macos-latest,
+              target: x86_64-apple-darwin,
+              extension: ".x86_64",
+            },
+            {
+              name: web,
+              runner: ubuntu-latest,
+              target: wasm32-unknown-unknown,
+              extension: ".zip",
+            },
+            {
+              name: windows,
+              runner: windows-latest,
+              target: x86_64-pc-windows-gnu,
+              extension: ".exe",
+            },
           ]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install dependencies
-        run: sudo apt-get install lld clang
+      - name: Setup mold linker
+        if: matrix.platform.name == 'linux'
+        uses: rui314/setup-mold@v1
+      - name: Install Ubuntu dependencies
+        if: matrix.platform.runner == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           target: ${{ matrix.platform.target }}
           toolchain: stable
+      - name: Package web build
+        if: matrix.platform.name == 'web'
+        run: |
+          cargo install cargo-binstall
+          cargo binstall -y trunk
+          mkdir -p target/web
+          trunk build --release
+          sudo apt-get install zip
+          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip target/web/*
       - name: Cargo build
+        if: matrix.platform.name != 'web'
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
           args: --release --target=${{ matrix.platform.target }}
-      - name: Upload artifact
+      - name: Zip Linux/Windows builds
+        if: matrix.platform.name != 'macos' && matrix.platform.name != 'web'
+        run: |
+          sudo apt-get install zip
+          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip target/release/${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+      - name: Upload artifact non-macOS
+        if: matrix.platform.name != 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
+          path: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
+      - name: Rename ARM64 macOS build
+        if: matrix.platform.name == 'macos-arm' || matrix.platform.name == 'macos-intel'
+        run: mv target/release/${{ env.ITCH_GAME }} ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+      - name: Upload artifact macOS
+        if: matrix.platform.name == 'macos'
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform.name }}
-          path: target/release/${{ matrix.platform.target }}
+          path: target/release/${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+  bundle-universal-app:
+    name: Bundle universal macOS app
+    needs: build-binaries
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifact-macos-*
+          path: artifacts
+      - name: Bundle universal app
+        run: |
+          ls -la
+          mkdir -p platforms/macos/macos_template.app/Contents/MacOS
+          lipo -create artifacts/${{ env.ITCH_GAME }}* -output platforms/macos/macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
+          zip -q -9 -r ${{ env.ITCH_GAME }}_macos.zip platforms/macos/macos_template.app
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ITCH_GAME }}_macos
+          path: ${{ env.ITCH_GAME }}_macos.zip
   create-release:
     name: Generate a release
-    needs: build-game
+    needs: bundle-universal-app
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -54,7 +134,7 @@ jobs:
         id: download-artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: artifact-*
+          pattern: ${{ env.ITCH_GAME }}_*
           path: artifacts
           merge-multiple: true
       - name: Get version
@@ -78,7 +158,7 @@ jobs:
           files: ${{ steps.download-artifacts.outputs.download-path }}/*
           tag_name: ${{ steps.get-version.outputs.VERSION }}
   deploy-pages:
-    needs: build-game
+    needs: build-binaries
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -92,30 +172,25 @@ jobs:
         with:
           folder: artifact-web
   deploy-itch:
-    needs: build-game
+    needs: bundle-universal-app
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          [
+            { name: linux, channel: linux },
+            { name: macos, channel: osx },
+            { name: web, channel: html5 },
+            { name: windows, channel: windows },
+          ]
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: artifact-*
-      - name: Deploy Windows build
+          pattern: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
+      - name: Deploy Itch.io build
         uses: josephbmanley/butler-publish-itchio-action@master
         env:
-          CHANNEL: windows
-          PACKAGE: artifact-windows.zip
-      - name: Deploy Linux build
-        uses: josephbmanley/butler-publish-itchio-action@master
-        env:
-          CHANNEL: linux
-          PACKAGE: artifact-linux.zip
-      - name: Deploy macOS build
-        uses: josephbmanley/butler-publish-itchio-action@master
-        env:
-          CHANNEL: osx
-          PACKAGE: artifact-macos.zip
-      - name: Deploy web build
-        uses: josephbmanley/butler-publish-itchio-action@master
-        env:
-          CHANNEL: html5
-          PACKAGE: artifact-web.zip
+          CHANNEL: ${{ matrix.platform.channel }}
+          PACKAGE: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip

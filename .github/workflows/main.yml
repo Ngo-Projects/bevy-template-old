@@ -125,10 +125,11 @@ jobs:
           path: artifacts
       - name: Bundle universal app
         run: |
-          ls -la
+          ls -la artifacts
           mkdir -p platforms/macos/macos_template.app/Contents/MacOS
-          lipo -create artifacts/${{ env.ITCH_GAME }}* -output platforms/macos/macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
-          cd platforms/macos
+          cp -r platforms/macos/macos_template.app .
+          mkdir -p macos_template.app/Contents/MacOS
+          lipo -create artifacts/${{ env.ITCH_GAME }}* -output macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
           tar -acf ${{ env.ITCH_GAME }}_macos.zip macos_template.app
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -179,6 +180,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_web
+      - name: Unzip web artifact
+        run: unzip ${{ env.ITCH_GAME }}_web.zip -d ${{ env.ITCH_GAME }}_web
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:

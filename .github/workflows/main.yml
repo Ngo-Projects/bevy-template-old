@@ -19,30 +19,35 @@ jobs:
             {
               name: linux,
               runner: ubuntu-latest,
+              toolchain: stable,
               target: x86_64-unknown-linux-gnu,
               extension: "",
             },
             {
               name: macos-arm,
               runner: macos-14,
+              toolchain: nightly,
               target: aarch64-apple-darwin,
               extension: ".arm64",
             },
             {
               name: macos-intel,
               runner: macos-latest,
+              toolchain: stable,
               target: x86_64-apple-darwin,
               extension: ".x86_64",
             },
             {
               name: web,
               runner: ubuntu-latest,
+              toolchain: stable,
               target: wasm32-unknown-unknown,
               extension: ".zip",
             },
             {
               name: windows,
               runner: windows-latest,
+              toolchain: stable,
               target: x86_64-pc-windows-msvc,
               extension: ".exe",
             },
@@ -60,7 +65,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.platform.name == 'macos-arm' && 'nightly' || 'stable' }}
+          toolchain: ${{ matrix.platform.toolchain }}
+          override: true
       - name: Package web build
         if: matrix.platform.name == 'web'
         run: |
@@ -68,8 +74,8 @@ jobs:
           cargo binstall -y trunk
           mkdir -p target/web
           trunk build --release
-          sudo apt-get install zip
-          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip target/web/*
+          cd target/web
+          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip *
       - name: Cargo build
         if: matrix.platform.name != 'web'
         uses: actions-rs/cargo@v1
@@ -79,15 +85,21 @@ jobs:
       - name: Zip Linux/Windows builds
         if: matrix.platform.name != 'macos' && matrix.platform.name != 'web'
         run: |
-          sudo apt-get install zip
-          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip target/release/${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+          echo List .
+          ls -la
+          echo List target
+          ls -la target
+          echo List target/release
+          ls -la target/release
+          cd target/release
+          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact non-macOS
         if: matrix.platform.name != 'macos'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
-          path: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
-      - name: Rename ARM64 macOS build
+          path: target/release/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
+      - name: Rename macOS build
         if: matrix.platform.name == 'macos-arm' || matrix.platform.name == 'macos-intel'
         run: mv target/release/${{ env.ITCH_GAME }} ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact macOS
@@ -95,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform.name }}
-          path: target/release/${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+          path: ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
   bundle-universal-app:
     name: Bundle universal macOS app
     needs: build-binaries
@@ -113,12 +125,13 @@ jobs:
           ls -la
           mkdir -p platforms/macos/macos_template.app/Contents/MacOS
           lipo -create artifacts/${{ env.ITCH_GAME }}* -output platforms/macos/macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
-          zip -q -9 -r ${{ env.ITCH_GAME }}_macos.zip platforms/macos/macos_template.app
+          cd platforms/macos
+          zip -q -9 -r ${{ env.ITCH_GAME }}_macos.zip macos_template.app
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_macos
-          path: ${{ env.ITCH_GAME }}_macos.zip
+          path: platforms/macos/${{ env.ITCH_GAME }}_macos.zip
   create-release:
     name: Generate a release
     needs: bundle-universal-app

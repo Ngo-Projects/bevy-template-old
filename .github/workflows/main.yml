@@ -75,7 +75,7 @@ jobs:
           mkdir -p target/web
           trunk build --release
           cd target/web
-          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip *
+          tar -acf ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip *
       - name: Cargo build
         if: matrix.platform.name != 'web'
         uses: actions-rs/cargo@v1
@@ -92,7 +92,7 @@ jobs:
           echo List target/${{ matrix.platform.target }}/release
           ls target/${{ matrix.platform.target }}/release
           cd target/${{ matrix.platform.target }}/release
-          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+          tar -acf ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
       - name: Upload artifact non-macOS
         if: ${{ !contains(matrix.platform.name , 'macos') }}
         uses: actions/upload-artifact@v4
@@ -129,7 +129,7 @@ jobs:
           mkdir -p platforms/macos/macos_template.app/Contents/MacOS
           lipo -create artifacts/${{ env.ITCH_GAME }}* -output platforms/macos/macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
           cd platforms/macos
-          zip -q -9 -r ${{ env.ITCH_GAME }}_macos.zip macos_template.app
+          tar -acf ${{ env.ITCH_GAME }}_macos.zip macos_template.app
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

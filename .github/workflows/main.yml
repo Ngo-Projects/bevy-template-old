@@ -67,6 +67,28 @@ jobs:
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.platform.toolchain }}
           override: true
+      - name: Cargo build
+        if: matrix.platform.name != 'web'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target=${{ matrix.platform.target }}
+      - name: Zip Linux build
+        if: matrix.platform.name == 'linux'
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+      - name: Zip Windows build
+        if: matrix.platform.name == 'windows'
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          tar -acf ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
+      - name: Upload Linux/Windows artifact
+        if: matrix.platform.name == 'linux' || matrix.platform.name == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
+          path: target/${{ matrix.platform.target }}/release/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
       - name: Package web build
         if: matrix.platform.name == 'web'
         run: |
@@ -75,30 +97,13 @@ jobs:
           mkdir -p target/web
           trunk build --release
           cd target/web
-          tar -acf ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip *
-      - name: Cargo build
-        if: matrix.platform.name != 'web'
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target=${{ matrix.platform.target }}
-      - name: Zip Linux/Windows builds
-        if: matrix.platform.name == 'linux' || matrix.platform.name == 'windows'
-        run: |
-          cd target/${{ matrix.platform.target }}/release
-          tar -acf ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip ${{ env.ITCH_GAME }}${{ matrix.platform.extension }}
-      - name: Upload Linux/Windows artifact
+          zip -q -9 -r ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip *
+      - name: Upload web artifact
         if: matrix.platform.name == 'web'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
           path: target/web/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
-      - name: Upload web artifact
-        if: matrix.platform.name == 'linux' || matrix.platform.name == 'windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.ITCH_GAME }}_${{ matrix.platform.name }}
-          path: target/${{ matrix.platform.target }}/release/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
       - name: Rename macOS build
         if: contains(matrix.platform.name, 'macos')
         run: |
@@ -186,7 +191,7 @@ jobs:
       - name: Unzip web artifact
         run: |
           mkdir -p pages
-          tar -xf artifact/${{ env.ITCH_GAME }}_web.zip -C pages
+          unzip artifact/${{ env.ITCH_GAME }}_web.zip -d pages
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:

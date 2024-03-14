@@ -43,7 +43,7 @@ jobs:
             {
               name: windows,
               runner: windows-latest,
-              target: x86_64-pc-windows-gnu,
+              target: x86_64-pc-windows-msvc,
               extension: ".exe",
             },
           ]
@@ -51,9 +51,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup mold linker
-        if: matrix.platform.name == 'linux'
-        uses: rui314/setup-mold@v1
       - name: Install Ubuntu dependencies
         if: matrix.platform.runner == 'ubuntu-latest'
         run: |
@@ -63,7 +60,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           target: ${{ matrix.platform.target }}
-          toolchain: stable
+          toolchain: ${{ matrix.platform.name == 'macos-arm' && 'nightly' || 'stable' }}
       - name: Package web build
         if: matrix.platform.name == 'web'
         run: |
@@ -77,7 +74,6 @@ jobs:
         if: matrix.platform.name != 'web'
         uses: actions-rs/cargo@v1
         with:
-          use-cross: true
           command: build
           args: --release --target=${{ matrix.platform.target }}
       - name: Zip Linux/Windows builds

@@ -125,17 +125,19 @@ jobs:
           path: artifacts
       - name: Bundle universal app
         run: |
-          ls -la artifacts
-          mkdir -p platforms/macos/macos_template.app/Contents/MacOS
-          cp -r platforms/macos/macos_template.app .
+          ls -la artifacts/artifact-macos-*
+          cd artifacts
+          mv artifact-macos-arm/${{ env.ITCH_GAME }}.arm64 .
+          mv artifact-macos-intel/${{ env.ITCH_GAME }}.x86_64 .
+          cp -r ../platforms/macos/macos_template.app .
           mkdir -p macos_template.app/Contents/MacOS
-          lipo -create artifacts/${{ env.ITCH_GAME }}* -output macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
+          lipo -create ${{ env.ITCH_GAME }}* -output macos_template.app/Contents/MacOS/${{ env.ITCH_GAME }}.universal
           tar -acf ${{ env.ITCH_GAME }}_macos.zip macos_template.app
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_macos
-          path: platforms/macos/${{ env.ITCH_GAME }}_macos.zip
+          path: artifacts/${{ env.ITCH_GAME }}_macos.zip
   create-release:
     name: Generate a release
     needs: bundle-universal-app
@@ -180,12 +182,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.ITCH_GAME }}_web
+          path: artifact
       - name: Unzip web artifact
-        run: unzip ${{ env.ITCH_GAME }}_web.zip -d ${{ env.ITCH_GAME }}_web
+        run: |
+          mkdir -p pages
+          tar -xzf artifact/${{ env.ITCH_GAME }}_web.zip -C pages
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: ${{ env.ITCH_GAME }}_web
+          folder: pages
   deploy-itch:
     needs: bundle-universal-app
     runs-on: ubuntu-latest

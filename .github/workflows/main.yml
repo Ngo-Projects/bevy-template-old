@@ -176,6 +176,8 @@ jobs:
     environment:
       name: github-pages
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Download web artifact
         uses: actions/download-artifact@v4
         with:
@@ -212,4 +214,4 @@ jobs:
         uses: josephbmanley/butler-publish-itchio-action@master
         env:
           CHANNEL: ${{ matrix.platform.channel }}
-          PACKAGE: artifact/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip
+          PACKAGE: artifact/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}/${{ env.ITCH_GAME }}_${{ matrix.platform.name }}.zip

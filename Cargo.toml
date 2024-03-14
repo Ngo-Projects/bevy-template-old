@@ -1,7 +1,7 @@
 [package]
 name = "bevy-template"
 description = "A game template developed using the Bevy engine."
-version = "0.0.0"
+version = "0.0.1"
 authors = ["jngo102@aim.com"]
 repository = "https://github.com/Ngo-Projects/bevy-template"
 edition = "2021"
